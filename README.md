@@ -1,6 +1,6 @@
 # Background
 
-This repo contains code to stand-up a database in GCP with data for gravitational wave merger detections since 2015 from the Gravitational Wave Open Science Center (GWOSC).
+This repo contains code that can be run from Google Colab to analyze gravitational wave merger detections since 2015 from the [Gravitational Wave Open Science Center (GWOSC)](https://www.gw-openscience.org/).
 
 # Steps
 
@@ -21,3 +21,9 @@ Why stand up a database on Google Cloud rather than simply using the `gwpy` pack
 2. Using SQL is generally more concise than calling APIs (even when applying complex logic) and since it's stored and pulled in the same format needed for exploration and modeling, it doesn't require any restructuring after pulling.
 
 # 01: exploration and visualization
+
+This notebook explores some descriptive statistics of the dataset, visualizes the data in different ways, and pulls data in using gwpy with the dataset's GPS as the primary key for the package.
+
+![](img/01_final_masses.png)
+
+
