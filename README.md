@@ -6,7 +6,7 @@ This repo contains code that can be run from Google Colab to analyze gravitation
 
 Essentially, gravitational waves are "ripples in the space-time pond", the existence of which Albert Einstein first theorized. A great introductory article on these waves, written for the layperson, is [here](https://spaceplace.nasa.gov/gravitational-waves/en/). The VIRGO/LIGO collaboration has also created a [helpful visual](https://www.youtube.com/watch?v=zLAmF0H-FTM):
 
-![](img/grav_waves_sm.gif)
+![](img/grav_waves_fst.gif)
 
 # Files
 
