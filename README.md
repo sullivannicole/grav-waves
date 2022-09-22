@@ -8,9 +8,17 @@ Essentially, gravitational waves are "ripples in the space-time pond", the exist
 
 ![](img/grav_waves_fst.gif)
 
+# Objectives
+
+## Model objective: deep learning to advance astrophysics
+On a practical level, this analysis seeks to architect a deep-learning timeseries model (LSTM) that outperforms the baseline model(s) on the selected evaluation metrics. The format of the analysis is inspired by [US Naval Research Laboratory research on solar flare duration forecasting](https://github.com/USNavalResearchLaboratory/flare_duration_forecasting).
+
+## Translational motivation: simplify to innovate
+There is also a translational motivation to this analysis. Much of academic research seeks to create cost efficiency by building software or machine learning tools in-house. However, oftentimes industry moves at such a pace that once-expensive solutions become free or low-cost faster than these tools can be built in-house, and the cost can scale with a department's (or consortium of departments') budget (if the budget grows or declines). Thus, this project seeks to also demonstrate that it's currently possible to create an end-to-end analysis from warehousing data to deploying a model endpoint API using industry standards completely free of cost; this is a step towards eliminating the time-cost (months to, more often, years) of developing **and maintaining** custom ML software and virtualization solutions.
+
 # Files
 
-The scrits in this repo are prefixed with numbers that indicate the order in which they should be run.
+The scripts in this repo are prefixed with numbers that indicate the order in which they should be run.
 
 ## 00: stand up a Google BigQuery database
 
