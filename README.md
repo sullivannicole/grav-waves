@@ -42,4 +42,17 @@ It also visualizes the raw strain data (prior to filtering out some of the backg
 
 ![](img/01_timeseries.png)
 
+## 02: create baseline machine learning and deep learning timeseries models
+
+This notebook performs the pre-processing necessary and creates both a baseline machine learning model as well as a long-short term memory (LSTM) neural network model and compares the performance of the two in predicting different gravitational wave data.
+
+The LSTM model architecture is straightforward:
+
+![](img/02_lstm_struct.png)
+
+The preliminary results of some testing of the model are visualized below.
+
+![](img/02_resids_10ep.png)
+![](img/02_resids_20ep.png)
+
 
