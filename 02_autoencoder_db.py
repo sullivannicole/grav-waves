@@ -37,7 +37,7 @@ FROM mergers.bns_generated
 WHERE event_id BETWEEN 400 AND 410
 """
 
-event_403 = client.query(sql).to_dataframe()
+gw_events = client.query(sql).to_dataframe()
 
 # ---------------------------------
 # Data pre-processing for torch
@@ -48,7 +48,7 @@ test_seqs = []
 
 for i in np.arange(400, 411):
 
-  event_pd = event_403.query(f'event_id == {i}')
+  event_pd = gw_events.query(f'event_id == {i}')
   event_vals = event_pd.strain.values
   event_tensor = torch.from_numpy(event_vals).float()
 
@@ -96,7 +96,7 @@ for i, ele in enumerate(z_ls):
 z_pd = pd.concat(z_pd_ls)
 
 # Create a spark dataframe to visualize
-spark.createDataFrame(z_pd).createOrReplaceTempView('z_test')
+spark.createDataFrame(z_pd).createOrReplaceTempView('test_z')
 
 
 # --------------------------------
@@ -111,12 +111,24 @@ for i, ele in enumerate(x_prime_ls):
   x_prime_pd_ls.append(pd_i)
 
 x_prime_pd = pd.concat(x_prime_pd_ls)
-x_prime_pd.head()
-
+x_prime_pd.reset_index(inplace = True)
+x_prime_df = x_prime_pd.rename(columns = {'index':'time_seq'})
+x_prime_df['time_seq'] = x_prime_df['time_seq']+1
 
 # COMMAND ----------
 
+spark.createDataFrame(x_prime_df).createOrReplaceTempView('test_x_prime')
+spark.createDataFrame(gw_events).createOrReplaceTempView('gw_main')
 
+# Add back in original strain
+spark.sql('''
+CREATE OR REPLACE TEMPORARY VIEW gw_reconstr_eval AS
+SELECT a.*, b.strain AS x_actual, pow((b.strain - a.x_prime), 2) AS MSE
+FROM test_x_prime a 
+LEFT JOIN gw_main b  
+ON a.event_id = b.event_id 
+AND a.time_seq = b.time_seq
+''')
 
 # COMMAND ----------
 
@@ -129,7 +141,9 @@ x_prime_pd.head()
 # MAGIC # library(tidyverse)
 # MAGIC # library(SparkR)
 # MAGIC
-# MAGIC z_df <- collect(sql('SELECT * FROM z_test;'))
+# MAGIC # Bottleneck vector plot
+# MAGIC
+# MAGIC z_df <- collect(sql('SELECT * FROM test_z;'))
 # MAGIC
 # MAGIC z_df %>%
 # MAGIC dplyr::group_by(event_id) %>%
@@ -139,3 +153,23 @@ x_prime_pd.head()
 # MAGIC geom_line(alpha = 0.7) +
 # MAGIC ylim(-2, 2) +
 # MAGIC facet_wrap(~factor(event_id))
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC # Actual vs. reconstructed
+# MAGIC
+# MAGIC gw_reconstr <- collect(sql('SELECT * FROM gw_reconstr_eval;'))
+# MAGIC
+# MAGIC ggplot(gw_reconstr, aes(x_actual, x_prime, color = factor(event_id))) +
+# MAGIC geom_point()
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC gw_reconstr %>%
+# MAGIC gather(x_actual, x_prime, key = "x", value = "strain") %>%
+# MAGIC ggplot(aes(time_seq, strain, color = x, group = x)) +
+# MAGIC geom_line()
