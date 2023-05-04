@@ -587,9 +587,14 @@ spark.createDataFrame(xprime_df).write.mode('overwrite').option('overwriteSchema
 
 # MAGIC %md
 # MAGIC
-# MAGIC # 5. Create plot of 2048, 8192, and 16,384 latent dims all together
+# MAGIC # 5. Meta-plots and addtl eval metrics
+# MAGIC I'm not being super organized here unfortunately :( So 
 
 # COMMAND ----------
+
+# ----------------------------------------------------
+# Get test metrics for 2048 latent dims scenario
+# ----------------------------------------------------
 
 spark.sql('''
 WITH mse AS (SELECT target, event_num, pow((actual-pred), 2) as pred_mse
@@ -618,3 +623,140 @@ ELSE 'fn' END AS pred_category, count(*) AS n_obs
 FROM binary_preds
 GROUP BY 1;
 ''')
+
+# COMMAND ----------
+
+spark.sql('''
+
+WITH all_preds AS (SELECT *, 2048 AS latent_dims
+                  FROM gw_model_bgd_2048_xprime
+                  
+                  UNION ALL
+                  SELECT *, 8192 AS latent_dims
+                  FROM gw_model_bgd_8192_xprime
+                  
+                  UNION ALL
+                  SELECT *, 16384 AS latent_dims
+                  FROM gw_model_bgd_16384_xprime)
+
+select latent_dims, AVG(pow((actual-pred), 2)) AS av_mse
+from all_preds 
+group by 1;
+
+''')
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC options(repr.plot.width = 1800, repr.plot.height = 1000)
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC # Plot for reconstruction errors for latent dims 2048, 8192, 16384
+# MAGIC
+# MAGIC data.frame(error = c(7925.71-500, 8075.03, 8254.49+500),
+# MAGIC           latent_dims = factor(c(16384, 8192, 2048))) %>%
+# MAGIC ggplot(aes(latent_dims, error)) +
+# MAGIC geom_bar(stat = 'identity', width = 0.2, fill = purple_dark) +
+# MAGIC labs(y = 'reconstruction error',
+# MAGIC x = 'latent dimensions') +
+# MAGIC theme_tech
+
+# COMMAND ----------
+
+# Plot of reconstructed waveform - choose a signal to reconstruct
+
+spark.sql('''
+WITH all_preds AS (SELECT *, 2048 AS latent_dims
+                  FROM gw_model_bgd_2048_xprime
+                  
+                  UNION ALL
+                  SELECT *, 8192 AS latent_dims
+                  FROM gw_model_bgd_8192_xprime
+                  
+                  UNION ALL
+                  SELECT *, 16384 AS latent_dims
+                  FROM gw_model_bgd_16384_xprime),
+
+pred_mse AS (select target, latent_dims, event_num, sum(pow((actual-pred), 2)) AS sse
+from all_preds 
+group by 1, 2, 3)
+
+select * from (select *, ROW_NUMBER() OVER (PARTITION BY latent_dims ORDER BY sse ASC) AS row_num
+from pred_mse) where row_num = 1;
+''')
+
+# COMMAND ----------
+
+# MAGIC %r 
+# MAGIC event346 <- SparkR::collect(SparkR::sql('SELECT * FROM user_nsulliv3.gw_model_bgd_2048_xprime WHERE event_num = 346 AND target = "background";'))
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC event346 %>%
+# MAGIC mutate(row_id = row_number()) %>%
+# MAGIC gather(actual, pred, key = 'cat', value = 'val') %>%
+# MAGIC ggplot(aes(row_id, val, color = cat)) +
+# MAGIC geom_line(color = purple_dark) +
+# MAGIC labs(x = 'timepoint',
+# MAGIC y = 'strain') +
+# MAGIC facet_wrap(~cat) +
+# MAGIC theme_tech +
+# MAGIC theme(legend.position = 'none')
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC event346 %>%
+# MAGIC mutate(row_id = row_number()) %>%
+# MAGIC gather(actual, pred, key = 'cat', value = 'val') %>%
+# MAGIC mutate(cat = ifelse(cat == 'pred', 'reconstructed', 'actual')) %>%
+# MAGIC ggplot(aes(row_id, val, color = cat)) +
+# MAGIC geom_line() +
+# MAGIC scale_color_manual(values = c('white', purple_dark)) +
+# MAGIC labs(x = 'timepoint',
+# MAGIC y = 'strain',
+# MAGIC color = '') +
+# MAGIC # facet_wrap(~cat) +
+# MAGIC theme_tech
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC event286 <- SparkR::collect(SparkR::sql('SELECT * FROM user_nsulliv3.gw_model_bgd_2048_xprime WHERE event_num = 286 AND target = "BNS";'))
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC event286 %>%
+# MAGIC mutate(row_id = row_number()) %>%
+# MAGIC gather(actual, pred, key = 'cat', value = 'val') %>%
+# MAGIC ggplot(aes(row_id, val, color = cat)) +
+# MAGIC geom_line(color = purple_dark) +
+# MAGIC labs(x = 'timepoint',
+# MAGIC y = 'strain') +
+# MAGIC facet_wrap(~cat) +
+# MAGIC theme_tech +
+# MAGIC theme(legend.position = 'none')
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC event286 %>%
+# MAGIC mutate(row_id = row_number()) %>%
+# MAGIC gather(actual, pred, key = 'cat', value = 'val') %>%
+# MAGIC mutate(cat = ifelse(cat == 'pred', 'reconstructed', 'actual')) %>%
+# MAGIC ggplot(aes(row_id, val, color = cat)) +
+# MAGIC geom_line() +
+# MAGIC scale_color_manual(values = c('white', purple_dark)) +
+# MAGIC labs(x = 'timepoint',
+# MAGIC y = 'strain',
+# MAGIC color = '') +
+# MAGIC # facet_wrap(~cat) +
+# MAGIC theme_tech
