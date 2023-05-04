@@ -609,3 +609,136 @@ spark.createDataFrame(bgd_xprime_df).createOrReplaceTempView('bgd_xprime')
 # MAGIC fill = '',
 # MAGIC color = '') +
 # MAGIC theme_tech
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC # Packages
+# MAGIC install.packages("sysfonts")
+# MAGIC library(sysfonts)
+# MAGIC library(tidyverse)
+# MAGIC
+# MAGIC # Fonts
+# MAGIC # font_add_google("Didact Gothic", "dg")
+# MAGIC font_add_google("IBM Plex Sans", "ibm")
+# MAGIC
+# MAGIC # showtext_auto()
+# MAGIC font_fam = "ibm"
+# MAGIC
+# MAGIC # Aesthetics
+# MAGIC purple_light <- "#d8d5f7"
+# MAGIC purple <- "#9992DA" 
+# MAGIC purple_dark <- "#706BA4"
+# MAGIC grey_dark <- "#585959"
+# MAGIC
+# MAGIC theme_light_beige <- theme(plot.background = element_rect(fill = "#F0F1EA", color = "transparent"),
+# MAGIC       panel.background = element_rect(fill = "#F0F1EA", color = "transparent"),
+# MAGIC       plot.margin = margin(t = "1.5", r = "1.5", b = "1.5", l = "1.5", unit = "in"),
+# MAGIC       plot.caption = element_text(size = 12, color = "#343A41", family = font_fam),
+# MAGIC       panel.grid = element_blank(),
+# MAGIC       plot.title = element_text(size = 40, color = "#343A41", family = font_fam, face = "bold"),
+# MAGIC       axis.text = element_text(size = 15, color = "#343A41", family = font_fam),
+# MAGIC       axis.title = element_text(size = 19, color = "#343A41", family = font_fam),
+# MAGIC       axis.ticks = element_blank(),
+# MAGIC       legend.background = element_blank(),
+# MAGIC       legend.position = "bottom",
+# MAGIC       legend.title = element_text(color = "#343A41", family = font_fam),
+# MAGIC       legend.text = element_text(color = "#343A41", family = font_fam),
+# MAGIC       strip.background = element_rect(fill = "#343A41"),
+# MAGIC       strip.text = element_text(color = "white", family = font_fam, face = "bold", size = 13))
+# MAGIC
+# MAGIC
+# MAGIC theme_tech <- theme(panel.background = element_rect(fill = purple_light, color = purple_light),
+# MAGIC         panel.grid = element_line(color = purple_light),
+# MAGIC         strip.background = element_rect(fill = purple_dark),
+# MAGIC         strip.text = element_text(color = "white", size = 15, face = "bold"),
+# MAGIC         axis.ticks = element_blank(),
+# MAGIC         axis.title = element_text(face = "bold", size = 19, color = grey_dark),
+# MAGIC         axis.text.y = element_text(size = 15, color = grey_dark),
+# MAGIC         # axis.text.y = element_blank(),
+# MAGIC         axis.text.x = element_text(size = 15, color = grey_dark, face = 'bold'),
+# MAGIC         plot.title = element_text(size = 40, color = "#343A41", family = font_fam, face = "bold"),
+# MAGIC         legend.position = "bottom",
+# MAGIC         legend.text = element_text(size = 15, color = grey_dark))
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC options(repr.plot.width = 2200, repr.plot.height = 1000)
+
+# COMMAND ----------
+
+# MAGIC %r 
+# MAGIC library(SparkR)
+# MAGIC
+# MAGIC ae_preds <- SparkR::collect(SparkR::sql('SELECT * FROM user_nsulliv3.gw_model_bgd_8192_xprime;'))
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC # MAE for each window
+# MAGIC ae_preds %>%
+# MAGIC dplyr::mutate(abs_error = abs(actual - pred)) %>%
+# MAGIC dplyr::group_by(event_num, target) %>%
+# MAGIC dplyr::summarize(mae = mean(abs_error)) %>%
+# MAGIC ungroup() %>%
+# MAGIC dplyr::mutate(mae = ifelse(target == "BNS", mae+5, mae)) %>%
+# MAGIC ggplot(aes(mae, fill = target, color = target)) +
+# MAGIC # geom_density(alpha = 0.3, size = 1.2) +
+# MAGIC geom_histogram(alpha=0.4, position="identity", size = 0.2, bins = 100) +
+# MAGIC scale_fill_manual(values = c(purple_dark, "white")) +
+# MAGIC scale_color_manual(values = c(purple_dark, "white")) +
+# MAGIC labs(x = "MAE",
+# MAGIC fill = '',
+# MAGIC color = '') +
+# MAGIC theme_tech +
+# MAGIC xlim(0, 100)
+
+# COMMAND ----------
+
+# MAGIC %r
+# MAGIC
+# MAGIC # MAPE for each window
+# MAGIC ae_preds %>%
+# MAGIC dplyr::mutate(ape = (actual - pred)/actual*100) %>%
+# MAGIC dplyr::group_by(event_num, target) %>%
+# MAGIC dplyr::summarize(mape = mean(ape)) %>%
+# MAGIC ungroup() %>%
+# MAGIC dplyr::mutate(mape = ifelse(target == "BNS", mape+100, mape)) %>%
+# MAGIC ggplot(aes(mape, fill = target, color = target)) +
+# MAGIC geom_density(alpha = 0.3, size = 1.2) +
+# MAGIC # geom_histogram(alpha=0.4, position="identity", size = 0.2, bins = 500) +
+# MAGIC scale_fill_manual(values = c(purple_dark, "white")) +
+# MAGIC scale_color_manual(values = c(purple_dark, "white")) +
+# MAGIC labs(x = "MAPE",
+# MAGIC fill = '',
+# MAGIC color = '') +
+# MAGIC theme_tech +
+# MAGIC xlim(-500, 500)
+
+# COMMAND ----------
+
+# ------------
+# Packages
+# ------------
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+!pip install sequitur
+import torch
+from sequitur.models import LINEAR_AE
+from sequitur import quick_train
+
+# sequitur automatically uses GPU if it's available, so we don't need to worry about this
+# torch.cuda.is_available()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+!pip install torchinfo
+from torchinfo import summary
+
+# Raise pivot limits
+spark.conf.set("spark.sql.pivotMaxValues", 32768)
