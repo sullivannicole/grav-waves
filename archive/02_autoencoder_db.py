@@ -717,28 +717,3 @@ spark.createDataFrame(bgd_xprime_df).createOrReplaceTempView('bgd_xprime')
 # MAGIC color = '') +
 # MAGIC theme_tech +
 # MAGIC xlim(-500, 500)
-
-# COMMAND ----------
-
-# ------------
-# Packages
-# ------------
-
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-
-!pip install sequitur
-import torch
-from sequitur.models import LINEAR_AE
-from sequitur import quick_train
-
-# sequitur automatically uses GPU if it's available, so we don't need to worry about this
-# torch.cuda.is_available()
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-!pip install torchinfo
-from torchinfo import summary
-
-# Raise pivot limits
-spark.conf.set("spark.sql.pivotMaxValues", 32768)
